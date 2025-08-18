@@ -76,6 +76,18 @@ echo "📚 Installing Python dependencies..."
 pip install --upgrade pip
 pip install -r requirements.txt
 
+# Run the setup script to configure everything
+echo "🔧 Running setup script..."
+python setup_sentiment_analysis.py &
+SETUP_PID=$!
+
+# Wait for setup to complete (with timeout)
+echo "⏳ Waiting for setup to complete..."
+timeout 300 bash -c 'while kill -0 $SETUP_PID 2>/dev/null; do sleep 5; done' || {
+    echo "⚠️ Setup script is taking longer than expected, continuing..."
+    kill $SETUP_PID 2>/dev/null || true
+}
+
 # Create systemd service for the API server
 echo "⚙️ Creating systemd service..."
 sudo tee /etc/systemd/system/sentiment-api.service > /dev/null <<EOF
@@ -88,6 +100,7 @@ Type=simple
 User=ubuntu
 WorkingDirectory=/opt/sentiment-analysis
 Environment=PATH=/opt/sentiment-analysis/venv/bin
+Environment=PYTHONPATH=/opt/sentiment-analysis
 ExecStart=/opt/sentiment-analysis/venv/bin/python sentiment_api_server.py
 Restart=always
 RestartSec=10
@@ -109,6 +122,7 @@ Type=simple
 User=ubuntu
 WorkingDirectory=/opt/sentiment-analysis
 Environment=PATH=/opt/sentiment-analysis/venv/bin
+Environment=PYTHONPATH=/opt/sentiment-analysis
 ExecStart=/opt/sentiment-analysis/venv/bin/python start_mlflow_server.py
 Restart=always
 RestartSec=10
@@ -197,6 +211,35 @@ EOF
 
 chmod +x health_check.sh
 
+# Run comprehensive health check
+echo ""
+echo "🏥 Running comprehensive health check..."
+sleep 10  # Give services time to fully start
+
+# Run health check script
+if [ -f "health_check.sh" ]; then
+    ./health_check.sh
+    HEALTH_CHECK_RESULT=$?
+else
+    echo "⚠️ Health check script not found, running basic checks..."
+    # Basic health checks
+    echo "Checking API server..."
+    if curl -s http://localhost:8001/health > /dev/null; then
+        echo "✅ API server is responding"
+    else
+        echo "❌ API server is not responding"
+    fi
+    
+    echo "Checking MLflow server..."
+    if curl -s http://localhost:5002 > /dev/null; then
+        echo "✅ MLflow server is responding"
+    else
+        echo "❌ MLflow server is not responding"
+    fi
+    
+    HEALTH_CHECK_RESULT=0
+fi
+
 echo ""
 echo "🎉 Deployment completed!"
 echo "======================="
@@ -214,3 +257,13 @@ echo "🔧 Next steps:"
 echo "1. Update your .env file with the correct MongoDB Atlas URI"
 echo "2. Configure MongoDB Atlas trigger with the trigger function"
 echo "3. Test the system by adding documents to incoming_reviews collection"
+echo ""
+if [ $HEALTH_CHECK_RESULT -eq 0 ]; then
+    echo "✅ System appears to be working correctly!"
+else
+    echo "⚠️ Some issues detected. Check the health check output above."
+    echo "💡 Troubleshooting:"
+    echo "   - Check service logs: sudo journalctl -u sentiment-api -f"
+    echo "   - Restart services: sudo systemctl restart sentiment-api mlflow-server"
+    echo "   - Run health check again: ./health_check.sh"
+fi
