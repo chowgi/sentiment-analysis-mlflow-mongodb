@@ -12,6 +12,9 @@ sudo apt update && sudo apt upgrade -y
 
 # Install Python 3.9 and pip
 echo "🐍 Installing Python 3.9..."
+sudo apt install -y software-properties-common
+sudo add-apt-repository ppa:deadsnakes/ppa -y
+sudo apt update
 sudo apt install -y python3.9 python3.9-pip python3.9-venv python3.9-dev
 
 # Install development tools
@@ -31,7 +34,25 @@ echo "📋 Setting up application files..."
 
 # Create virtual environment
 echo "🔧 Creating Python virtual environment..."
-python3.9 -m venv venv
+
+# Check available Python versions
+if command -v python3.9 &> /dev/null; then
+    PYTHON_CMD="python3.9"
+elif command -v python3.8 &> /dev/null; then
+    PYTHON_CMD="python3.8"
+elif command -v python3 &> /dev/null; then
+    PYTHON_CMD="python3"
+else
+    echo "❌ No Python 3.x found. Installing Python 3.9..."
+    sudo apt install -y software-properties-common
+    sudo add-apt-repository ppa:deadsnakes/ppa -y
+    sudo apt update
+    sudo apt install -y python3.9 python3.9-pip python3.9-venv python3.9-dev
+    PYTHON_CMD="python3.9"
+fi
+
+echo "Using Python: $PYTHON_CMD"
+$PYTHON_CMD -m venv venv
 source venv/bin/activate
 
 # Install dependencies
@@ -54,6 +75,8 @@ Environment=PATH=/opt/sentiment-analysis/venv/bin
 ExecStart=/opt/sentiment-analysis/venv/bin/python sentiment_api_server.py
 Restart=always
 RestartSec=10
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
@@ -73,6 +96,8 @@ Environment=PATH=/opt/sentiment-analysis/venv/bin
 ExecStart=/opt/sentiment-analysis/venv/bin/python start_mlflow_server.py
 Restart=always
 RestartSec=10
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
@@ -83,8 +108,25 @@ echo "🚀 Starting services..."
 sudo systemctl daemon-reload
 sudo systemctl enable sentiment-api
 sudo systemctl enable mlflow-server
+
+# Start services and check status
+echo "Starting sentiment-api service..."
 sudo systemctl start sentiment-api
+if sudo systemctl is-active --quiet sentiment-api; then
+    echo "✅ sentiment-api service started successfully"
+else
+    echo "❌ sentiment-api service failed to start"
+    sudo systemctl status sentiment-api
+fi
+
+echo "Starting mlflow-server service..."
 sudo systemctl start mlflow-server
+if sudo systemctl is-active --quiet mlflow-server; then
+    echo "✅ mlflow-server service started successfully"
+else
+    echo "❌ mlflow-server service failed to start"
+    sudo systemctl status mlflow-server
+fi
 
 # Configure firewall (if using security groups, configure in AWS console)
 echo "🔥 Configuring firewall..."
