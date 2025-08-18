@@ -29,8 +29,12 @@ cd /opt/sentiment-analysis
 
 # Clone or copy application files
 echo "📋 Setting up application files..."
-# Note: You'll need to copy your application files here
-# Either via SCP, git clone, or other method
+git clone https://github.com/chowgi/sentiment-analysis-mlflow-mongodb.git .
+
+# Make scripts executable
+echo "🔧 Making scripts executable..."
+chmod +x deploy_ubuntu_ec2.sh
+chmod +x start_system.sh
 
 # Create virtual environment
 echo "🔧 Creating Python virtual environment..."
