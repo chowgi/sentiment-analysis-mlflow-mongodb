@@ -186,32 +186,176 @@ def start_api_server():
         return None
 
 def run_tests():
-    """Run the test script"""
-    logger.info("Running tests...")
+    """Run comprehensive tests to verify the system is working"""
+    logger.info("🧪 Running comprehensive tests...")
     
+    # Wait a bit for servers to start
+    logger.info("⏳ Waiting for servers to start...")
+    time.sleep(10)
+    
+    # Test 1: Check if ports are listening
+    logger.info("🔍 Checking if ports are listening...")
+    import socket
+    
+    def check_port(port, service_name):
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(5)
+            result = sock.connect_ex(('localhost', port))
+            sock.close()
+            if result == 0:
+                logger.info(f"✅ Port {port} ({service_name}) is listening")
+                return True
+            else:
+                logger.warning(f"⚠️ Port {port} ({service_name}) is not listening")
+                return False
+        except Exception as e:
+            logger.warning(f"⚠️ Could not check port {port}: {e}")
+            return False
+    
+    api_port_ok = check_port(8001, "API Server")
+    mlflow_port_ok = check_port(5002, "MLflow UI")
+    
+    # Test 2: Check API health endpoint
+    logger.info("🔍 Testing API health endpoint...")
     try:
-        # Wait a bit more for servers to be fully ready
-        time.sleep(3)
+        response = requests.get("http://localhost:8001/health", timeout=10)
+        if response.status_code == 200:
+            logger.info("✅ API health endpoint is working")
+            logger.info(f"   Response: {response.json()}")
+        else:
+            logger.warning(f"⚠️ API health endpoint returned status {response.status_code}")
+            logger.warning(f"   Response: {response.text}")
+    except requests.exceptions.ConnectionError:
+        logger.error("❌ Could not connect to API server - connection refused")
+        logger.error("   This usually means the API server failed to start")
+    except requests.exceptions.Timeout:
+        logger.error("❌ API server connection timed out")
+    except Exception as e:
+        logger.error(f"❌ API health endpoint error: {e}")
+    
+    # Test 3: Check API documentation endpoint
+    logger.info("🔍 Testing API documentation...")
+    try:
+        response = requests.get("http://localhost:8001/docs", timeout=10)
+        if response.status_code == 200:
+            logger.info("✅ API documentation is accessible")
+        else:
+            logger.warning(f"⚠️ API documentation returned status {response.status_code}")
+    except Exception as e:
+        logger.error(f"❌ API documentation error: {e}")
+    
+    # Test 4: Test sentiment analysis endpoint
+    logger.info("🔍 Testing sentiment analysis endpoint...")
+    try:
+        test_data = {
+            "review": "This movie is absolutely fantastic!",
+            "movie_title": "Test Movie",
+            "user_id": "test_user"
+        }
+        response = requests.post(
+            "http://localhost:8001/predict",
+            json=test_data,
+            timeout=15
+        )
+        if response.status_code == 200:
+            result = response.json()
+            logger.info("✅ Sentiment analysis endpoint is working")
+            logger.info(f"   Sentiment: {result.get('sentiment', 'N/A')}")
+            logger.info(f"   Confidence: {result.get('confidence', 'N/A')}")
+        else:
+            logger.warning(f"⚠️ Sentiment analysis returned status {response.status_code}")
+            logger.warning(f"   Response: {response.text}")
+    except requests.exceptions.ConnectionError:
+        logger.error("❌ Could not connect to sentiment analysis endpoint")
+    except requests.exceptions.Timeout:
+        logger.error("❌ Sentiment analysis request timed out")
+    except Exception as e:
+        logger.error(f"❌ Sentiment analysis error: {e}")
+    
+    # Test 5: Check MLflow UI
+    logger.info("🔍 Testing MLflow UI...")
+    try:
+        response = requests.get("http://localhost:5002", timeout=10)
+        if response.status_code == 200:
+            logger.info("✅ MLflow UI is accessible")
+            if "MLflow" in response.text:
+                logger.info("   MLflow UI content detected")
+            else:
+                logger.warning("   MLflow UI content not detected")
+        else:
+            logger.warning(f"⚠️ MLflow UI returned status {response.status_code}")
+    except Exception as e:
+        logger.error(f"❌ MLflow UI error: {e}")
+    
+    # Test 6: Check MongoDB connection
+    logger.info("🔍 Testing MongoDB connection...")
+    try:
+        from dotenv import load_dotenv
+        from pymongo import MongoClient
+        import os
         
+        load_dotenv()
+        uri = os.getenv('MONGODB_URI')
+        if not uri:
+            logger.error("❌ MONGODB_URI not found in .env file")
+        else:
+            client = MongoClient(uri, serverSelectionTimeoutMS=5000)
+            client.admin.command('ping')
+            logger.info("✅ MongoDB Atlas connection successful")
+            client.close()
+    except Exception as e:
+        logger.error(f"❌ MongoDB connection failed: {e}")
+    
+    # Test 7: Check system resources
+    logger.info("🔍 Checking system resources...")
+    try:
+        import psutil
+        cpu_percent = psutil.cpu_percent(interval=1)
+        memory = psutil.virtual_memory()
+        logger.info(f"   CPU Usage: {cpu_percent}%")
+        logger.info(f"   Memory Usage: {memory.percent}% ({memory.used // 1024 // 1024}MB / {memory.total // 1024 // 1024}MB)")
+        
+        if cpu_percent > 90:
+            logger.warning("⚠️ High CPU usage detected")
+        if memory.percent > 90:
+            logger.warning("⚠️ High memory usage detected")
+    except ImportError:
+        logger.info("   psutil not available - skipping resource check")
+    except Exception as e:
+        logger.warning(f"⚠️ Could not check system resources: {e}")
+    
+    # Test 8: Run the original test script
+    logger.info("🔍 Running original test script...")
+    try:
         result = subprocess.run([
             sys.executable, "test_sentiment_api.py"
         ], capture_output=True, text=True)
         
         if result.returncode == 0:
-            logger.info("✅ Tests completed successfully")
-            logger.info("Test output:")
-            print(result.stdout)
+            logger.info("✅ Original test script completed successfully")
         else:
-            logger.warning("⚠️ Some tests may have failed")
+            logger.warning("⚠️ Original test script had issues")
             logger.info("Test output:")
             print(result.stdout)
             print("Errors:")
             print(result.stderr)
-        
-        return True
     except Exception as e:
-        logger.error(f"❌ Test execution failed: {e}")
-        return False
+        logger.error(f"❌ Original test script failed: {e}")
+    
+    # Summary
+    logger.info("📊 Test Summary:")
+    if api_port_ok and mlflow_port_ok:
+        logger.info("✅ Both services appear to be running")
+    else:
+        logger.warning("⚠️ Some services may not be running properly")
+        logger.info("💡 Troubleshooting tips:")
+        logger.info("   - Check logs: tail -f nohup.out")
+        logger.info("   - Check processes: ps aux | grep python")
+        logger.info("   - Check ports: netstat -tuln | grep -E ':(8001|5002)'")
+        logger.info("   - Restart services: ./start_system.sh")
+    
+    return True
 
 def cleanup_previous_setup():
     """Clean up any previous MLflow setup files"""

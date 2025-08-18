@@ -145,6 +145,53 @@ else
     api_test_status=1
 fi
 
+echo -e "\n${BLUE}🔍 Process and Resource Check${NC}"
+echo "--------------------------------"
+
+# Check Python processes
+echo "Checking Python processes..."
+python_processes=$(ps aux | grep python | grep -v grep | wc -l)
+echo "   Python processes running: $python_processes"
+
+# Check specific service processes
+sentiment_api_process=$(ps aux | grep "sentiment_api_server.py" | grep -v grep | wc -l)
+mlflow_process=$(ps aux | grep "start_mlflow_server.py" | grep -v grep | wc -l)
+
+if [ $sentiment_api_process -gt 0 ]; then
+    echo -e "${GREEN}✅ Sentiment API server process is running${NC}"
+else
+    echo -e "${RED}❌ Sentiment API server process not found${NC}"
+fi
+
+if [ $mlflow_process -gt 0 ]; then
+    echo -e "${GREEN}✅ MLflow server process is running${NC}"
+else
+    echo -e "${RED}❌ MLflow server process not found${NC}"
+fi
+
+# Check system resources
+echo "Checking system resources..."
+if command -v free &> /dev/null; then
+    memory_info=$(free -h | grep Mem)
+    echo "   Memory: $memory_info"
+fi
+
+if command -v df &> /dev/null; then
+    disk_usage=$(df -h / | tail -1 | awk '{print $5}')
+    echo "   Disk usage: $disk_usage"
+fi
+
+# Check recent logs
+echo -e "\n${BLUE}📋 Recent Logs Check${NC}"
+echo "----------------------"
+
+# Check systemd service logs
+echo "Recent sentiment-api service logs:"
+sudo journalctl -u sentiment-api --no-pager -n 5 | grep -E "(ERROR|WARN|CRITICAL)" || echo "   No recent errors found"
+
+echo "Recent mlflow-server service logs:"
+sudo journalctl -u mlflow-server --no-pager -n 5 | grep -E "(ERROR|WARN|CRITICAL)" || echo "   No recent errors found"
+
 echo -e "\n${BLUE}📊 Summary${NC}"
 echo "-------"
 
