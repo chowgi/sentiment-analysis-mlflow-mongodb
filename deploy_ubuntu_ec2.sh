@@ -173,6 +173,9 @@ chmod +x start_services.sh
 echo "🏥 Creating health check script..."
 tee health_check.sh > /dev/null <<EOF
 #!/bin/bash
+cd /opt/sentiment-analysis
+source venv/bin/activate
+
 echo "Checking API server health..."
 curl -s http://localhost:8001/health | jq .
 
@@ -180,7 +183,7 @@ echo "Checking MLflow server..."
 curl -s http://localhost:5002 | head -5
 
 echo "Checking MongoDB connection..."
-python3 -c "
+python -c "
 import os
 from dotenv import load_dotenv
 from pymongo import MongoClient
