@@ -39,13 +39,18 @@ chmod +x start_system.sh
 # Create virtual environment
 echo "🔧 Creating Python virtual environment..."
 
-# Check available Python versions
+# Check available Python versions and install venv package
 if command -v python3.9 &> /dev/null; then
     PYTHON_CMD="python3.9"
+    VENV_PACKAGE="python3.9-venv"
 elif command -v python3.8 &> /dev/null; then
     PYTHON_CMD="python3.8"
+    VENV_PACKAGE="python3.8-venv"
 elif command -v python3 &> /dev/null; then
     PYTHON_CMD="python3"
+    # Get the exact Python version for venv package
+    PYTHON_VERSION=$(python3 --version | cut -d' ' -f2 | cut -d'.' -f1,2)
+    VENV_PACKAGE="python${PYTHON_VERSION}-venv"
 else
     echo "❌ No Python 3.x found. Installing Python 3.9..."
     sudo apt install -y software-properties-common
@@ -53,9 +58,16 @@ else
     sudo apt update
     sudo apt install -y python3.9 python3.9-pip python3.9-venv python3.9-dev
     PYTHON_CMD="python3.9"
+    VENV_PACKAGE="python3.9-venv"
 fi
 
 echo "Using Python: $PYTHON_CMD"
+echo "Installing venv package: $VENV_PACKAGE"
+
+# Install the appropriate venv package
+sudo apt install -y $VENV_PACKAGE
+
+# Create virtual environment
 $PYTHON_CMD -m venv venv
 source venv/bin/activate
 
