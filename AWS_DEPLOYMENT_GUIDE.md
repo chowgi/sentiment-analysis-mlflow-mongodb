@@ -22,7 +22,7 @@ This guide will help you deploy the complete sentiment analysis system with Mong
 
 ### **1.1 Launch EC2 Instance**
 - **Instance Type**: t3.medium or larger (recommended: t3.large for ML models)
-- **AMI**: Amazon Linux 2 or Ubuntu 20.04
+- **AMI**: Ubuntu 20.04 or 22.04 (recommended)
 - **Storage**: At least 20GB
 - **Security Groups**: 
   - Port 22 (SSH)
@@ -31,7 +31,7 @@ This guide will help you deploy the complete sentiment analysis system with Mong
 
 ### **1.2 Connect to EC2**
 ```bash
-ssh -i your-key.pem ec2-user@your-ec2-ip
+ssh -i your-key.pem ubuntu@your-ec2-ip
 ```
 
 ## 📦 **Step 2: Deploy Application**
@@ -39,17 +39,23 @@ ssh -i your-key.pem ec2-user@your-ec2-ip
 ### **2.1 Copy Application Files**
 ```bash
 # Option 1: SCP (from your local machine)
-scp -i your-key.pem -r /path/to/mlflow/* ec2-user@your-ec2-ip:/opt/sentiment-analysis/
+scp -i your-key.pem -r /path/to/mlflow/* ubuntu@your-ec2-ip:/opt/sentiment-analysis/
 
-# Option 2: Git clone
+# Option 2: Git clone (recommended)
 cd /opt
-sudo git clone https://github.com/your-repo/sentiment-analysis.git
-sudo chown -R ec2-user:ec2-user sentiment-analysis
+sudo git clone https://github.com/chowgi/
+sentiment-analysis-mlflow-mongodb.git sentiment-analysis
+sudo chown -R ubuntu:ubuntu sentiment-analysis
 cd sentiment-analysis
 ```
 
 ### **2.2 Run Deployment Script**
 ```bash
+# For Ubuntu EC2 instances (recommended)
+chmod +x deploy_ubuntu_ec2.sh
+./deploy_ubuntu_ec2.sh
+
+# Or for Amazon Linux instances
 chmod +x deploy_to_ec2.sh
 ./deploy_to_ec2.sh
 ```
@@ -84,6 +90,8 @@ In the trigger function, update the API URL to point to your EC2 instance:
 // Change this line in mongodb_trigger.js
 url: "http://YOUR_EC2_PRIVATE_IP:8001/predict",
 ```
+
+**Note**: Use the private IP address for better security and performance.
 
 ## 🧪 **Step 4: Testing the System**
 
@@ -186,6 +194,12 @@ df -h
 
 ### **Common Issues**
 
+#### **Ubuntu vs Amazon Linux Differences**
+- **User**: Ubuntu uses `ubuntu`, Amazon Linux uses `ec2-user`
+- **Package Manager**: Ubuntu uses `apt`, Amazon Linux uses `yum`
+- **Firewall**: Ubuntu uses `ufw`, Amazon Linux uses `firewalld`
+- **Use the appropriate deployment script**: `deploy_ubuntu_ec2.sh` for Ubuntu
+
 #### **API Server Not Starting**
 ```bash
 # Check logs
@@ -215,6 +229,18 @@ client.close()
 - Check MongoDB Atlas App Services logs
 - Verify trigger configuration
 - Ensure API server is accessible from Atlas
+- Check if using correct IP address (private vs public)
+
+#### **Firewall Issues on Ubuntu**
+```bash
+# Check UFW status
+sudo ufw status
+
+# Allow ports if needed
+sudo ufw allow 8001/tcp
+sudo ufw allow 5002/tcp
+sudo ufw allow ssh
+```
 
 ## 📞 **Support**
 
@@ -223,6 +249,8 @@ For issues or questions:
 2. Verify MongoDB Atlas trigger logs
 3. Test API endpoints manually
 4. Check system resources: `htop`, `df -h`
+5. Ensure you're using the correct deployment script for your OS
+6. Check firewall settings: `sudo ufw status`
 
 ## 🎉 **Success Indicators**
 

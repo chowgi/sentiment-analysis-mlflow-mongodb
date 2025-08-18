@@ -1,28 +1,27 @@
 #!/bin/bash
 
-# AWS EC2 Deployment Script for Sentiment Analysis System
-# This script sets up the complete system on an EC2 instance
+# AWS EC2 Ubuntu Deployment Script for Sentiment Analysis System
+# This script sets up the complete system on an Ubuntu EC2 instance
 
-echo "🚀 Deploying Sentiment Analysis System to AWS EC2..."
-echo "=================================================="
+echo "🚀 Deploying Sentiment Analysis System to Ubuntu EC2..."
+echo "======================================================"
 
 # Update system packages
 echo "📦 Updating system packages..."
-sudo yum update -y
+sudo apt update && sudo apt upgrade -y
 
 # Install Python 3.9 and pip
 echo "🐍 Installing Python 3.9..."
-sudo yum install -y python3.9 python3.9-pip python3.9-devel
+sudo apt install -y python3.9 python3.9-pip python3.9-venv python3.9-dev
 
 # Install development tools
 echo "🔧 Installing development tools..."
-sudo yum groupinstall -y "Development Tools"
-sudo yum install -y git
+sudo apt install -y build-essential git curl jq
 
 # Create application directory
 echo "📁 Setting up application directory..."
 sudo mkdir -p /opt/sentiment-analysis
-sudo chown $USER:$USER /opt/sentiment-analysis
+sudo chown ubuntu:ubuntu /opt/sentiment-analysis
 cd /opt/sentiment-analysis
 
 # Clone or copy application files
@@ -49,7 +48,7 @@ After=network.target
 
 [Service]
 Type=simple
-User=ec2-user
+User=ubuntu
 WorkingDirectory=/opt/sentiment-analysis
 Environment=PATH=/opt/sentiment-analysis/venv/bin
 ExecStart=/opt/sentiment-analysis/venv/bin/python sentiment_api_server.py
@@ -68,7 +67,7 @@ After=network.target
 
 [Service]
 Type=simple
-User=ec2-user
+User=ubuntu
 WorkingDirectory=/opt/sentiment-analysis
 Environment=PATH=/opt/sentiment-analysis/venv/bin
 ExecStart=/opt/sentiment-analysis/venv/bin/python start_mlflow_server.py
@@ -89,12 +88,10 @@ sudo systemctl start mlflow-server
 
 # Configure firewall (if using security groups, configure in AWS console)
 echo "🔥 Configuring firewall..."
-sudo yum install -y firewalld
-sudo systemctl enable firewalld
-sudo systemctl start firewalld
-sudo firewall-cmd --permanent --add-port=8001/tcp  # API server
-sudo firewall-cmd --permanent --add-port=5002/tcp  # MLflow UI
-sudo firewall-cmd --reload
+sudo ufw allow 8001/tcp  # API server
+sudo ufw allow 5002/tcp  # MLflow UI
+sudo ufw allow ssh       # Keep SSH access
+sudo ufw --force enable
 
 # Create startup script
 echo "📝 Creating startup script..."
