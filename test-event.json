@@ -1,0 +1,33 @@
+{
+  "version": "0",
+  "id": "test-event-id",
+  "detail-type": "MongoDB Triggers Triggered",
+  "source": "aws.partner/mongodb.com/stitch.trigger/test-trigger-id",
+  "account": "123456789012",
+  "time": "2025-01-19T00:00:00Z",
+  "region": "ap-southeast-2",
+  "resources": [],
+  "detail": {
+    "database": "imdb_reviews",
+    "collection": "incoming_reviews",
+    "operationType": "insert",
+    "documentKey": {
+      "_id": {
+        "$oid": "507f1f77bcf86cd799439011"
+      }
+    },
+    "fullDocument": {
+      "_id": {
+        "$oid": "507f1f77bcf86cd799439011"
+      },
+      "review": "This movie was absolutely fantastic! The acting was superb and the plot was engaging from start to finish.",
+      "movie_title": "The Great Adventure",
+      "user_id": "user123",
+      "timestamp": "2025-01-19T00:00:00.000Z"
+    },
+    "ns": {
+      "db": "imdb_reviews",
+      "coll": "incoming_reviews"
+    }
+  }
+}
