@@ -83,11 +83,11 @@ def call_sagemaker_endpoint(document: Dict[str, Any]) -> Dict[str, Any]:
         print(f"SageMaker response: {result}")
         
         # Format the result
-        # SageMaker typically returns predictions in a specific format
+        # SageMaker returns predictions in format: {"label": "POSITIVE", "score": 0.9998}
         sentiment_result = {
             'review': review_text,
-            'sentiment': result.get('sentiment', result.get('prediction', 'UNKNOWN')),
-            'confidence': result.get('confidence', result.get('score', 0.0)),
+            'sentiment': result.get('label', result.get('sentiment', result.get('prediction', 'UNKNOWN'))),
+            'confidence': result.get('score', result.get('confidence', 0.0)),
             'timestamp': datetime.utcnow().isoformat(),
             'movie_title': document.get('movie_title'),
             'user_id': document.get('user_id'),
