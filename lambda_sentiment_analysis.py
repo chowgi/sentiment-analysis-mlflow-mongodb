@@ -58,11 +58,9 @@ def call_sagemaker_endpoint(document: Dict[str, Any]) -> Dict[str, Any]:
     review_text = document.get('review', '')
     
     # Format input for SageMaker endpoint
-    # Adjust this based on your model's expected input format
+    # The endpoint expects 'text' field based on the error message
     input_data = {
-        "review": review_text,
-        "movie_title": document.get('movie_title'),
-        "user_id": document.get('user_id')
+        "text": review_text
     }
     
     # Convert to JSON string
@@ -85,16 +83,18 @@ def call_sagemaker_endpoint(document: Dict[str, Any]) -> Dict[str, Any]:
         print(f"SageMaker response: {result}")
         
         # Format the result
+        # SageMaker typically returns predictions in a specific format
         sentiment_result = {
             'review': review_text,
-            'sentiment': result.get('sentiment', 'UNKNOWN'),
-            'confidence': result.get('confidence', 0.0),
+            'sentiment': result.get('sentiment', result.get('prediction', 'UNKNOWN')),
+            'confidence': result.get('confidence', result.get('score', 0.0)),
             'timestamp': datetime.utcnow().isoformat(),
             'movie_title': document.get('movie_title'),
             'user_id': document.get('user_id'),
             'model_version': 'sagemaker-distilbert',
             'source_document_id': str(document.get('_id')),
-            'processed_at': datetime.utcnow().isoformat()
+            'processed_at': datetime.utcnow().isoformat(),
+            'raw_sagemaker_response': result  # Store the raw response for debugging
         }
         
         return sentiment_result

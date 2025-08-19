@@ -154,12 +154,16 @@ if aws lambda get-function --function-name $FUNCTION_NAME --region $REGION > /de
         --zip-file fileb://lambda_deployment.zip \
         --region $REGION
     
+    echo "✅ Lambda function code updated successfully"
+    
     # Update configuration
     aws lambda update-function-configuration \
         --function-name $FUNCTION_NAME \
         --timeout $TIMEOUT \
         --memory-size $MEMORY_SIZE \
         --region $REGION
+    
+    echo "✅ Lambda function configuration updated successfully"
 else
     echo "🆕 Creating new Lambda function..."
     
