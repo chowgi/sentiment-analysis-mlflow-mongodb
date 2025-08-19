@@ -65,7 +65,7 @@ echo "⚙️ Setting environment variables..."
 aws lambda update-function-configuration \
     --function-name $FUNCTION_NAME \
     --environment Variables='{
-        "SAGEMAKER_ENDPOINT_NAME":"distilbert-sentiment-endpoint",
+        "SAGEMAKER_ENDPOINT_NAME":"distilbert-sentiment",
         "MONGODB_DATABASE":"imdb_reviews",
         "MONGODB_COLLECTION":"sentiment_analysis"
     }' \
@@ -88,6 +88,7 @@ aws lambda add-permission \
     --statement-id SageMakerInvoke \
     --action lambda:InvokeFunction \
     --principal sagemaker.amazonaws.com \
+    --source-arn arn:aws:sagemaker:ap-southeast-2:211125542926:endpoint/distilbert-sentiment \
     --region $REGION
 
 # Clean up

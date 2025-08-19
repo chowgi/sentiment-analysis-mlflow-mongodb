@@ -48,7 +48,7 @@ def call_sagemaker_endpoint(document: Dict[str, Any]) -> Dict[str, Any]:
     Call SageMaker endpoint for sentiment analysis
     """
     # SageMaker configuration
-    ENDPOINT_NAME = os.environ.get('SAGEMAKER_ENDPOINT_NAME', 'distilbert-sentiment-endpoint')
+    ENDPOINT_NAME = os.environ.get('SAGEMAKER_ENDPOINT_NAME', 'distilbert-sentiment')
     REGION = os.environ.get('AWS_REGION', 'ap-southeast-2')
     
     # Initialize SageMaker runtime client
