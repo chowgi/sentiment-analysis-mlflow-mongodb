@@ -98,6 +98,53 @@ cd lambda_deployment
 zip -r ../lambda_deployment.zip .
 cd ..
 
+# Create Lambda execution role if it doesn't exist
+create_lambda_role() {
+    ROLE_NAME="lambda-execution-role"
+    echo "🔐 Creating Lambda execution role..."
+    
+    # Create trust policy
+    cat > trust-policy.json << EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "lambda.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+EOF
+
+    # Create role
+    aws iam create-role \
+        --role-name $ROLE_NAME \
+        --assume-role-policy-document file://trust-policy.json \
+        --region $REGION 2>/dev/null || echo "Role already exists or creation failed"
+    
+    # Attach basic execution policy
+    aws iam attach-role-policy \
+        --role-name $ROLE_NAME \
+        --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole \
+        --region $REGION 2>/dev/null || echo "Basic execution policy already attached"
+    
+    # Attach SageMaker policy
+    aws iam attach-role-policy \
+        --role-name $ROLE_NAME \
+        --policy-arn arn:aws:iam::aws:policy/AmazonSageMakerFullAccess \
+        --region $REGION 2>/dev/null || echo "SageMaker policy already attached"
+    
+    # Wait for role to be available
+    echo "⏳ Waiting for role to be available..."
+    sleep 10
+    
+    # Clean up
+    rm -f trust-policy.json
+}
+
 # Check if function exists
 echo "🔍 Checking if Lambda function exists..."
 if aws lambda get-function --function-name $FUNCTION_NAME --region $REGION > /dev/null 2>&1; then
@@ -115,6 +162,14 @@ if aws lambda get-function --function-name $FUNCTION_NAME --region $REGION > /de
         --region $REGION
 else
     echo "🆕 Creating new Lambda function..."
+    
+    # Create role first
+    create_lambda_role
+    
+    # Get account ID
+    ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+    ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/lambda-execution-role"
+    
     aws lambda create-function \
         --function-name $FUNCTION_NAME \
         --runtime $RUNTIME \
@@ -123,18 +178,14 @@ else
         --memory-size $MEMORY_SIZE \
         --zip-file fileb://lambda_deployment.zip \
         --region $REGION \
-        --role arn:aws:iam::$(aws sts get-caller-identity --query Account --output text):role/lambda-execution-role
+        --role $ROLE_ARN
 fi
 
 # Set environment variables
 echo "⚙️ Setting environment variables..."
 aws lambda update-function-configuration \
     --function-name $FUNCTION_NAME \
-    --environment Variables='{
-        "SAGEMAKER_ENDPOINT_NAME":"distilbert-sentiment",
-        "MONGODB_DATABASE":"imdb_reviews",
-        "MONGODB_COLLECTION":"sentiment_analysis"
-    }' \
+    --environment Variables='{"SAGEMAKER_ENDPOINT_NAME":"distilbert-sentiment","MONGODB_DATABASE":"imdb_reviews","MONGODB_COLLECTION":"sentiment_analysis"}' \
     --region $REGION
 
 # Add permissions for EventBridge
@@ -145,7 +196,7 @@ aws lambda add-permission \
     --action lambda:InvokeFunction \
     --principal events.amazonaws.com \
     --source-arn arn:aws:events:$REGION:$(aws sts get-caller-identity --query Account --output text):rule/* \
-    --region $REGION
+    --region $REGION 2>/dev/null || echo "EventBridge permissions already exist"
 
 # Add permissions for SageMaker
 echo "🔐 Adding SageMaker permissions..."
@@ -155,7 +206,7 @@ aws lambda add-permission \
     --action lambda:InvokeFunction \
     --principal sagemaker.amazonaws.com \
     --source-arn arn:aws:sagemaker:ap-southeast-2:211125542926:endpoint/distilbert-sentiment \
-    --region $REGION
+    --region $REGION 2>/dev/null || echo "SageMaker permissions already exist"
 
 # Clean up
 echo "🧹 Cleaning up..."
