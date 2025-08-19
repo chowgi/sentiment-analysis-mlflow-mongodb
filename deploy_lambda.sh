@@ -6,6 +6,62 @@
 echo "🚀 Deploying Lambda Function for Sentiment Analysis..."
 echo "====================================================="
 
+# Check for required tools
+check_requirements() {
+    echo "🔍 Checking requirements..."
+    
+    # Check for zip
+    if ! command -v zip &> /dev/null; then
+        echo "❌ zip command not found. Installing..."
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            # macOS
+            if command -v brew &> /dev/null; then
+                brew install zip
+            else
+                echo "❌ Please install Homebrew first: https://brew.sh/"
+                echo "   Then run: brew install zip"
+                exit 1
+            fi
+        elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+            # Linux
+            if command -v apt-get &> /dev/null; then
+                sudo apt-get update && sudo apt-get install -y zip
+            elif command -v yum &> /dev/null; then
+                sudo yum install -y zip
+            else
+                echo "❌ Please install zip manually for your Linux distribution"
+                exit 1
+            fi
+        else
+            echo "❌ Please install zip manually for your operating system"
+            exit 1
+        fi
+    fi
+    
+    # Check for AWS CLI
+    if ! command -v aws &> /dev/null; then
+        echo "❌ AWS CLI not found. Please install it first:"
+        echo "   https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html"
+        echo ""
+        echo "   For macOS: brew install awscli"
+        echo "   For Linux: pip install awscli"
+        echo ""
+        echo "   After installation, configure AWS credentials:"
+        echo "   aws configure"
+        exit 1
+    fi
+    
+    # Check AWS credentials
+    if ! aws sts get-caller-identity &> /dev/null; then
+        echo "❌ AWS credentials not configured. Please run:"
+        echo "   aws configure"
+        echo "   or set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables"
+        exit 1
+    fi
+    
+    echo "✅ All requirements satisfied"
+}
+
 # Configuration
 FUNCTION_NAME="sentiment-analysis-lambda"
 REGION="ap-southeast-2"
@@ -13,6 +69,9 @@ RUNTIME="python3.9"
 HANDLER="lambda_sentiment_analysis.lambda_handler"
 TIMEOUT=30
 MEMORY_SIZE=512
+
+# Run requirements check
+check_requirements
 
 # Create deployment directory
 echo "📁 Creating deployment package..."
@@ -24,7 +83,14 @@ cp lambda_sentiment_analysis.py lambda_deployment/
 
 # Install dependencies
 echo "📦 Installing dependencies..."
-pip install -r lambda_requirements.txt -t lambda_deployment/
+if command -v pip3 &> /dev/null; then
+    pip3 install -r lambda_requirements.txt -t lambda_deployment/
+elif command -v pip &> /dev/null; then
+    pip install -r lambda_requirements.txt -t lambda_deployment/
+else
+    echo "❌ pip not found. Please install Python and pip first."
+    exit 1
+fi
 
 # Create deployment package
 echo "📦 Creating ZIP package..."
@@ -94,7 +160,9 @@ aws lambda add-permission \
 # Clean up
 echo "🧹 Cleaning up..."
 rm -rf lambda_deployment
-rm lambda_deployment.zip
+if [ -f "lambda_deployment.zip" ]; then
+    rm lambda_deployment.zip
+fi
 
 echo ""
 echo "✅ Lambda function deployed successfully!"
