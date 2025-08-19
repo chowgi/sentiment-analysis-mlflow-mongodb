@@ -185,7 +185,7 @@ fi
 echo "⚙️ Setting environment variables..."
 aws lambda update-function-configuration \
     --function-name $FUNCTION_NAME \
-    --environment Variables='{"SAGEMAKER_ENDPOINT_NAME":"distilbert-sentiment","MONGODB_DATABASE":"imdb_reviews","MONGODB_COLLECTION":"sentiment_analysis"}' \
+    --environment 'Variables={"SAGEMAKER_ENDPOINT_NAME":"distilbert-sentiment","MONGODB_DATABASE":"imdb_reviews","MONGODB_COLLECTION":"sentiment_analysis"}' \
     --region $REGION
 
 # Add permissions for EventBridge
